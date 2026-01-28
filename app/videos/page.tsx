@@ -155,7 +155,7 @@ export default function VideosPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             job_id: jobId,
-            target: "storyboard",
+            target: "video", // use "storyboard" to stop at storyboard step to save time/cost
             force: false,
             video_request: {
               scene_ids: [],
@@ -186,45 +186,71 @@ export default function VideosPage() {
       setJobStatusText([status && `Status: ${status}`, step && `Step: ${step}`, msg].filter(Boolean).join(" | "))
     })
 
-    // // 2) subscribe clips subcollection
-    // const clipsQ = query(collection(db, "jobs", jobId, "clips"))
-    // const unsubClips = onSnapshot(clipsQ, async (snap) => {
-    //   // 每次有变动：找 DONE 的 clips，按 key 拉 signed-url
-    //   for (const change of snap.docChanges()) {
-    //     const data: any = change.doc.data()
-    //     const status = String(data.status ?? "").toUpperCase()
-    //     const key = data.key as string | undefined
-    //     const title = (data.title as string | undefined) ?? change.doc.id
+    // 2) subscribe clips subcollection
+    const clipsQ = query(collection(db, "jobs", jobId, "clips"))
+    const unsubClips = onSnapshot(clipsQ, async (snap) => {
+      for (const change of snap.docChanges()) {
+        // Only care about added / modified
+        if (change.type !== "added" && change.type !== "modified") continue
 
-    //     if (status === "DONE" && key) {
-    //       if (requestedKeysRef.current.has(key)) continue
-    //       requestedKeysRef.current.add(key)
+        const data: any = change.doc.data()
 
-    //       try {
-    //         const su = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(key)}`)
-    //         if (!su.ok) throw new Error(await su.text())
-    //         const suJson = await su.json()
-    //         const url = suJson.url
-    //         if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
+        // align with backend schema
+        const status = String(data.status ?? "").toUpperCase() // READY
+        const key = data.clip_key as string | undefined
+        const title =
+          (data.scene_id as string | undefined) ??
+          change.doc.id
 
-    //         setVideos((prev) => {
-    //           // 避免重复加
-    //           if (prev.some((v) => v.id === key)) return prev
-    //           const next = [...prev, { id: key, title, url }]
-    //           // 默认选第一个
-    //           if (!selectedVideo && next.length > 0) setSelectedVideo(next[0])
-    //           return next
-    //         })
-    //       } catch (e) {
-    //         console.error("signed-url failed for key", key, e)
-    //       }
-    //     }
-    //   }
-    // })
+        // only READY and has key, then GET signed-url
+        if (status === "READY" && key) {
+          // deduplication - skip if already requested
+          if (requestedKeysRef.current.has(key)) continue
+          requestedKeysRef.current.add(key)
+
+          try {
+            console.log("signed-url request key =", key)
+            const su = await fetch(
+              `/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(
+                key
+              )}`
+            )
+            if (!su.ok) throw new Error(await su.text())
+
+            const suJson = await su.json()
+            const url = suJson.url
+            if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
+
+            setVideos((prev) => {
+              // Avoid duplicates
+              if (prev.some((v) => v.id === key)) return prev
+
+              const next = [
+                ...prev,
+                {
+                  id: key,
+                  title,
+                  url,
+                },
+              ]
+
+              // Take first video as selected as default
+              if (!selectedVideo && next.length > 0) {
+                setSelectedVideo(next[0])
+              }
+
+              return next
+            })
+          } catch (e) {
+            console.error("signed-url failed for key", key, e)
+          }
+        }
+      }
+    })
 
     return () => {
       unsubJob()
-      // unsubClips()
+      unsubClips()
     }
   }, [jobId])
 
