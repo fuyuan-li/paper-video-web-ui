@@ -51,31 +51,25 @@ export default function UploadPage() {
     formData.append("pdf", file)
 
     try {
-      // Simulated progress for UX
+      // progress simulation
       const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return prev
-          }
-          return prev + 10
-        })
+        setUploadProgress((prev) => (prev >= 90 ? prev : prev + 10))
       }, 200)
 
-      const response = await fetch("/api/convert", {
-        method: "POST",
-        body: formData,
-      })
+      // Just upload to /api/upload
+      const up = await fetch("/api/upload", { method: "POST", body: formData })
 
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      if (response.ok) {
-        const data = await response.json()
-        // Store videos in sessionStorage and navigate to videos page
-        sessionStorage.setItem("videos", JSON.stringify(data.videos))
-        router.push("/videos")
-      }
+      if (!up.ok) throw new Error(`upload failed: ${up.status} ${await up.text()}`)
+
+      const upJson = await up.json()
+      const jobId = upJson.job_id
+      if (!jobId) throw new Error(`upload response missing gcs uri: ${JSON.stringify(upJson)}`)
+
+      // direct to /videos with gcs_uri param immediately after upload
+      router.push(`/videos?job_id=${encodeURIComponent(jobId)}`)
     } catch (error) {
       console.error("Upload failed:", error)
     } finally {

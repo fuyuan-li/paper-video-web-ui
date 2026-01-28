@@ -3,6 +3,9 @@
 import React from "react"
 
 import { useEffect, useState, useRef } from "react"
+import { useSearchParams } from "next/navigation"
+// import { db } from "@/lib/firebase"
+// import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore"
 import Link from "next/link"
 import {
   Video,
@@ -55,6 +58,17 @@ interface PDFInfo {
 }
 
 export default function VideosPage() {
+
+  // Get gcs_uri and job_id from URL
+  const searchParams = useSearchParams()
+  const jobId = searchParams.get("job_id")
+  const [jobStatusText, setJobStatusText] = useState<string>("")
+  const [startedRun, setStartedRun] = useState(false)
+
+  // 防止对同一个 key 重复请求 signed-url
+  const requestedKeysRef = useRef<Set<string>>(new Set())
+
+  // Video state
   const [videos, setVideos] = useState<VideoClip[]>([])
   const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -81,6 +95,7 @@ export default function VideosPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // PDF Info state
+  // const [jobStatusText, setJobStatusText] = useState<string>("")
   const [pdfInfo, setPdfInfo] = useState<PDFInfo | null>(null)
   const [isInfoExpanded, setIsInfoExpanded] = useState(true)
 
@@ -124,6 +139,35 @@ export default function VideosPage() {
     // Scroll to bottom when new messages arrive
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  useEffect(() => {
+    if (!jobId || startedRun) return
+
+    ;(async () => {
+      try {
+        setJobStatusText("Starting pipeline...")
+        const resp = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            job_id: jobId,
+            target: "storyboard",
+            force: false,
+            video_request: {
+              scene_ids: [],
+              dry_run: false,
+              save_prompts: true,
+            },
+          }),
+        })
+        if (!resp.ok) throw new Error(`run failed: ${resp.status} ${await resp.text()}`)
+        setStartedRun(true)
+        setJobStatusText("Pipeline running (listening for updates)...")
+      } catch (e: any) {
+        setJobStatusText(`Error starting run: ${e?.message ?? String(e)}`)
+      }
+    })()
+  }, [jobId, startedRun])
 
   const togglePlay = () => {
     if (videoRef.current) {
