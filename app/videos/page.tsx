@@ -4,8 +4,8 @@ import React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-// import { db } from "@/lib/firebase"
-// import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore"
 import Link from "next/link"
 import {
   Video,
@@ -95,8 +95,13 @@ export default function VideosPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // PDF Info state
-  // const [jobStatusText, setJobStatusText] = useState<string>("")
-  const [pdfInfo, setPdfInfo] = useState<PDFInfo | null>(null)
+  const [pdfInfo, setPdfInfo] = useState<PDFInfo>({
+    title: "Additional Info",
+    summary: "",
+    keyTopics: [],
+    chapters: [],
+    metadata: [],
+  })
   const [isInfoExpanded, setIsInfoExpanded] = useState(true)
 
   useEffect(() => {
@@ -118,8 +123,7 @@ export default function VideosPage() {
       // Mock data for demo - replace with actual backend data
       setPdfInfo({
         title: "Document Title",
-        summary:
-          "This is a placeholder summary of your PDF document. Connect your backend to populate this section with actual extracted content from the uploaded PDF.",
+        summary: jobStatusText || "Waiting for job updates...", 
         keyTopics: ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
         chapters: [
           { title: "Introduction", page: 1 },
@@ -168,6 +172,63 @@ export default function VideosPage() {
       }
     })()
   }, [jobId, startedRun])
+
+  useEffect(() => {
+    if (!jobId) return
+
+    // 1) subscribe job doc
+    const unsubJob = onSnapshot(doc(db, "jobs", jobId), (snap) => {
+      if (!snap.exists()) return
+      const j: any = snap.data()
+      const status = j.status ?? ""
+      const step = j.current_step ?? ""
+      const msg = j.message ?? ""
+      setJobStatusText([status && `Status: ${status}`, step && `Step: ${step}`, msg].filter(Boolean).join(" | "))
+    })
+
+    // // 2) subscribe clips subcollection
+    // const clipsQ = query(collection(db, "jobs", jobId, "clips"))
+    // const unsubClips = onSnapshot(clipsQ, async (snap) => {
+    //   // 每次有变动：找 DONE 的 clips，按 key 拉 signed-url
+    //   for (const change of snap.docChanges()) {
+    //     const data: any = change.doc.data()
+    //     const status = String(data.status ?? "").toUpperCase()
+    //     const key = data.key as string | undefined
+    //     const title = (data.title as string | undefined) ?? change.doc.id
+
+    //     if (status === "DONE" && key) {
+    //       if (requestedKeysRef.current.has(key)) continue
+    //       requestedKeysRef.current.add(key)
+
+    //       try {
+    //         const su = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(key)}`)
+    //         if (!su.ok) throw new Error(await su.text())
+    //         const suJson = await su.json()
+    //         const url = suJson.url
+    //         if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
+
+    //         setVideos((prev) => {
+    //           // 避免重复加
+    //           if (prev.some((v) => v.id === key)) return prev
+    //           const next = [...prev, { id: key, title, url }]
+    //           // 默认选第一个
+    //           if (!selectedVideo && next.length > 0) setSelectedVideo(next[0])
+    //           return next
+    //         })
+    //       } catch (e) {
+    //         console.error("signed-url failed for key", key, e)
+    //       }
+    //     }
+    //   }
+    // })
+
+    return () => {
+      unsubJob()
+      // unsubClips()
+    }
+  }, [jobId])
+
+
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -343,7 +404,7 @@ export default function VideosPage() {
           Back to Upload
         </Link>
 
-        {videos.length === 0 ? (
+        {videos.length === -1 ? (
           <Card className="border-2 border-border bg-card p-12 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -563,6 +624,15 @@ export default function VideosPage() {
                           )}
                           {pdfInfo.summary && (
                             <p className="text-sm text-muted-foreground leading-relaxed">{pdfInfo.summary}</p>
+                          )}
+                          {jobStatusText ? (
+                            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                              <span className="font-medium text-foreground">Live status:</span> {jobStatusText}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              Waiting for pipeline updates...
+                            </p>
                           )}
                         </div>
                       )}
