@@ -148,6 +148,8 @@ export default function VideosPage() {
   useEffect(() => {
     if (!jobId || startedRun) return
 
+    setStartedRun(true)
+
     ;(async () => {
       try {
         setJobStatusText("Starting pipeline...")
@@ -166,7 +168,6 @@ export default function VideosPage() {
           }),
         })
         if (!resp.ok) throw new Error(`run failed: ${resp.status} ${await resp.text()}`)
-        setStartedRun(true)
         setJobStatusText("Pipeline running (listening for updates)...")
       } catch (e: any) {
         setJobStatusText(`Error starting run: ${e?.message ?? String(e)}`)
