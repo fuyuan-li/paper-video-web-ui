@@ -68,6 +68,8 @@ export default function VideosPage() {
 
   // 防止对同一个 key 重复请求 signed-url
   const requestedKeysRef = useRef<Set<string>>(new Set())
+  const requestedMergedRef = useRef(false)
+  const requestedMergedUriRef = useRef<string | null>(null)
 
   // Video state
   const [videos, setVideos] = useState<VideoClip[]>([])
@@ -158,7 +160,7 @@ export default function VideosPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             job_id: jobId,
-            target: "video", // use "storyboard" to stop at storyboard step to save time/cost
+            target: "merge", // use "storyboard" to stop at storyboard step to save time/cost, use "merge" for final
             force: false,
             video_request: {
               scene_ids: [],
@@ -188,71 +190,50 @@ export default function VideosPage() {
       setJobStatusText([status && `Status: ${status}`, step && `Step: ${step}`, msg].filter(Boolean).join(" | "))
     })
 
-    // 2) subscribe clips subcollection
-    const clipsQ = query(collection(db, "jobs", jobId, "clips"))
+    // 2) subscribe to merged
+    const clipsQ = doc(db, "jobs", jobId)
     const unsubClips = onSnapshot(clipsQ, async (snap) => {
-      for (const change of snap.docChanges()) {
-        // Only care about added / modified
-        if (change.type !== "added" && change.type !== "modified") continue
+      if (!snap.exists()) return
+      const data: any = snap.data()
 
-        const data: any = change.doc.data()
+      // align with backend schema
+      const mergeStatus = String(data.merge_status ?? "").toLowerCase() // "completed"
+      const key = data.output_gcs_path as string | undefined
 
-        // align with backend schema
-        const status = String(data.status ?? "").toUpperCase() // READY
-        const key = data.clip_key as string | undefined
-        const title =
-          (data.scene_id as string | undefined) ??
-          change.doc.id
+      // 只在 completed + 有 gcs_uri 时触发
+      if (mergeStatus !== "completed" || !key) return
 
-        // only READY and has key, then GET signed-url
-        if (status === "READY" && key) {
-          // deduplication - skip if already requested
-          if (requestedKeysRef.current.has(key)) continue
-          requestedKeysRef.current.add(key)
+      // 去重：同一个 uri 只签一次（避免 snapshot 多次触发）
+      if (requestedMergedRef.current && requestedMergedUriRef.current === key) return
+      requestedMergedRef.current = true
+      requestedMergedUriRef.current = key
 
-          try {
-            console.log("signed-url request key =", key)
-            const su = await fetch(
-              `/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(
-                key
-              )}`
-            )
-            if (!su.ok) throw new Error(await su.text())
+      try {
+        console.log("signed-url request for merged video:", key)
 
-            const suJson = await su.json()
-            const url = suJson.url
-            if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
+        //Backend endpoint is GET /api/jobs/:jobId/signed-url?key=(gs://{bucket})/...
+        const su = await fetch(
+          `/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(
+            key
+          )}`
+        )
+        if (!su.ok) throw new Error(await su.text())
 
-            setVideos((prev) => {
-              // Avoid duplicates
-              if (prev.some((v) => v.id === key)) return prev
-
-              const next = [
-                ...prev,
-                {
-                  id: key,
-                  title,
-                  url,
-                },
-              ]
-
-              // Take first video as selected as default
-              if (!selectedVideo && next.length > 0) {
-                setSelectedVideo(next[0])
-              }
-
-              return next
-            })
-          } catch (e) {
-            console.error("signed-url failed for key", key, e)
-          }
-        }
+        const suJson = await su.json()
+        const url = suJson.url
+        if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
+          
+        const mergedVideo = { id: "merged", title: "Merged Video", url }
+        setVideos([mergedVideo])
+        setSelectedVideo(mergedVideo)
+      } catch (e) {
+        console.error("signed-url failed for merged video", e)
       }
     })
 
     return () => {
       unsubJob()
-      // unsubClips()
+      unsubClips()
     }
   }, [jobId])
 
