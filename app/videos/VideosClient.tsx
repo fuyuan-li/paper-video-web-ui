@@ -10,6 +10,7 @@ import { useVideosSession } from "./hooks/useVideosSession"
 import { useVideoPlayer } from "./hooks/useVideoPlayer"
 import { useJobSubscriptions } from "./hooks/useJobSubscriptions"
 import { useChat } from "./hooks/useChat"
+import { useJobProgress } from "./hooks/useJobProgress" 
 
 import { VideosHeader } from "./components/VideosHeader"
 import { EmptyState } from "./components/EmptyState"
@@ -29,6 +30,9 @@ export default function VideosClient() {
 
   // 3) player state
   const player = useVideoPlayer(videos)
+
+  // 4) run progress bar
+  const { pct, label, message } = useJobProgress(jobId)
 
   // Auto-select first video once videos loaded (avoid using `player` object as dependency)
   React.useEffect(() => {
@@ -89,6 +93,9 @@ export default function VideosClient() {
               onPrevVideo={player.playPreviousVideo}
               onNextVideo={player.playNextVideo}
               onSelectVideo={player.selectVideo}
+              progressPct={pct}
+              progressLabel={label}
+              progressMessage={message}
             />
 
             <PdfInfoPanel

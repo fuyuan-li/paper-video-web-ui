@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { VideoClip } from "../lib/types"
 import { formatTime } from "../lib/format"
+import { JobProgressBar } from "../components/JobProgressBar"
 
 type Props = {
   videos: VideoClip[]
@@ -16,6 +17,10 @@ type Props = {
   isMuted: boolean
   currentTime: number
   duration: number
+
+  progressPct?: number
+  progressLabel?: string
+  progressMessage?: string
 
   onTogglePlay: () => void
   onSetPlaying: (v: boolean) => void
@@ -44,6 +49,9 @@ export function VideoSection(props: Props) {
     isMuted,
     currentTime,
     duration,
+    progressPct,
+    progressLabel,
+    progressMessage,
     onTogglePlay,
     onSetPlaying,
     onTimeUpdate,
@@ -157,6 +165,18 @@ export function VideoSection(props: Props) {
           </div>
         )}
       </Card>
+
+      {/* Job progress */}
+      <Card className="border-2 border-border bg-card p-3 mt-3 flex-shrink-0">
+{typeof progressPct === "number" && progressLabel ? (
+        <JobProgressBar
+          pct={progressPct}
+          label={progressLabel}
+          message={progressMessage}
+        />
+      ) : null}
+      </Card>
+      
 
       {/* Clips strip */}
       <Card className="border-2 border-border bg-card p-3 mt-3 flex-shrink-0">
