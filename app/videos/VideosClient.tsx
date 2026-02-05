@@ -69,7 +69,7 @@ export default function VideosClient() {
           Back to Upload
         </Link>
 
-        {videos.length === 0 ? (
+        {videos.length === -1 ? (
           <EmptyState />
         ) : (
           <div className="grid gap-6 lg:grid-cols-5">
