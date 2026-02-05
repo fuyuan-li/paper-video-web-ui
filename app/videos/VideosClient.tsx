@@ -44,43 +44,6 @@ export default function VideosClient() {
     { step: "doc_ir", ts: Date.now() - 5000, data: { title: "Demo Paper", page_count: 20 } },
     { step: "sketch", ts: Date.now() - 2000, data: { abstract_summary: "This paper shows..." } },
   ])
-
-  const appendBlock = (step: string, data: Record<string, any>) => {
-    setBlocks((prev) => [...prev, { step, ts: Date.now(), data }])
-  }
-
-  const appendShort = () => {
-    appendBlock("sketch", {
-      abstract_summary: "New block appended ✅ (short)",
-    })
-  }
-
-  const appendLong = () => {
-    appendBlock("sketch", {
-      abstract_summary:
-        "Long block appended ✅\n\n" +
-        "This paper shows... ".repeat(40) +
-        "\n\n(End of long text)",
-    })
-  }
-
-  const updatePinned = () => {
-    setPinned((p) => ({
-      title:
-        (p.title?.includes("UPDATED")
-          ? "All you need is attention and copula based performance efficient matrix decomposition"
-          : "UPDATED TITLE (long) — " + "very long title ".repeat(12)).trim(),
-      pageCount: typeof p.pageCount === "number" ? p.pageCount + 1 : 1,
-    }))
-  }
-
-  const resetBlocks = () => {
-    setPinned({ title: "Demo Paper", pageCount: 20 })
-    setBlocks([
-      { step: "doc_ir", ts: Date.now() - 3000, data: { title: "Demo Paper", page_count: 20 } },
-      { step: "sketch", ts: Date.now() - 1500, data: { abstract_summary: "This paper shows..." } },
-    ])
-  }
   // Step 5 end
 
   // Auto-select first video once videos loaded (avoid using `player` object as dependency)
@@ -148,38 +111,6 @@ export default function VideosClient() {
             />
 
             <div className="lg:col-span-2 flex flex-col gap-3">
-              {/* Debug controls: remove later */}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-muted transition-colors"
-                  onClick={appendShort}
-                  type="button"
-                >
-                  Append short block
-                </button>
-                <button
-                  className="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-muted transition-colors"
-                  onClick={appendLong}
-                  type="button"
-                >
-                  Append long block
-                </button>
-                <button
-                  className="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-muted transition-colors"
-                  onClick={updatePinned}
-                  type="button"
-                >
-                  Update title/pages
-                </button>
-                <button
-                  className="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-muted transition-colors"
-                  onClick={resetBlocks}
-                  type="button"
-                >
-                  Reset
-                </button>
-              </div>
-
               <PdfInfoPanel pinned={pinned} blocks={blocks} />
             </div>
 
