@@ -1,123 +1,74 @@
 "use client"
 
-import React from "react"
-import { BookOpen, ChevronDown, ChevronUp, FileText, List, Tags } from "lucide-react"
+import React, { useEffect, useMemo, useRef } from "react"
+import { FileText } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import type { PDFInfo } from "../lib/types"
+import { BlockRenderer, type InfoBlock } from "./PdfInfoBlocks"
 
-type Props = {
-  pdfInfo: PDFInfo | null
-  jobStatusText: string
-  isExpanded: boolean
-  onToggleExpanded: () => void
+export type PinnedMeta = {
+  title?: string
+  pageCount?: number
 }
 
-export function PdfInfoPanel({ pdfInfo, jobStatusText, isExpanded, onToggleExpanded }: Props) {
-  if (!pdfInfo) return null
+type Props = {
+  pinned: PinnedMeta
+  blocks: InfoBlock[]
+}
+
+export function PdfInfoPanel({ pinned, blocks }: Props) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  // ✅ 自动下滚：滚动 panel 内部，而不是页面
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({top: el.scrollHeight, behavior: "smooth" })
+  }, [blocks.length])
+
+  const titleText = useMemo(() => pinned.title?.trim() || "Document title (pending)", [pinned.title])
+  const pagesText = useMemo(
+    () => (typeof pinned.pageCount === "number" ? String(pinned.pageCount) : "—"),
+    [pinned.pageCount]
+  )
 
   return (
     <div className="lg:col-span-2 flex">
-      <Card className="border-2 border-border bg-card w-full flex flex-col">
-        {/* Header */}
-        <button
-          onClick={onToggleExpanded}
-          className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+      {/* ✅ 关键：给 Card 限高，这样内部 overflow 才会生效 */}
+      <Card className="border-2 border-border bg-card w-full flex flex-col overflow-hidden h-[calc(100vh-220px)]">
+        {/* Pinned: Title + Pages only */}
+        <div className="p-4 border-b-2 border-border bg-card">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 shrink-0">
               <FileText className="h-5 w-5 text-accent" />
             </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-foreground">Additional Info</h3>
-              <p className="text-xs text-muted-foreground">From your PDF</p>
+
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-foreground whitespace-pre-wrap break-words leading-snug">
+                {titleText}
+              </div>
+
+              <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="uppercase tracking-wide text-xs">Pages</span>
+                <span className="px-2 py-0.5 rounded-md bg-muted text-foreground font-semibold">{pagesText}</span>
+              </div>
             </div>
           </div>
-          {isExpanded ? (
-            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        {/* ✅ 滚动容器：ref 放这里 */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+          {blocks.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-2">Waiting for pipeline updates…</div>
           ) : (
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          )}
-        </button>
-
-        {/* Body */}
-        {isExpanded && (
-          <div className="border-t-2 border-border p-4 space-y-5 flex-1 overflow-y-auto">
-            {(pdfInfo.title || pdfInfo.summary) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <BookOpen className="h-4 w-4" />
-                  <span>Summary</span>
+            <div className="divide-y divide-border/60">
+              {blocks.map((block, idx) => (
+                <div key={`${block.step}-${block.ts}-${idx}`} className="py-4">
+                  <BlockRenderer block={block} />
                 </div>
-                {pdfInfo.title && <h4 className="text-base font-semibold text-foreground">{pdfInfo.title}</h4>}
-                {pdfInfo.summary && <p className="text-sm text-muted-foreground leading-relaxed">{pdfInfo.summary}</p>}
-
-                {jobStatusText ? (
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-                    <span className="font-medium text-foreground">Live status:</span> {jobStatusText}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground leading-relaxed">Waiting for pipeline updates...</p>
-                )}
-              </div>
-            )}
-
-            {pdfInfo.keyTopics?.length ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Tags className="h-4 w-4" />
-                  <span>Key Topics</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {pdfInfo.keyTopics.map((topic, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent font-medium"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {pdfInfo.chapters?.length ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <List className="h-4 w-4" />
-                  <span>Chapters</span>
-                </div>
-                <div className="space-y-1">
-                  {pdfInfo.chapters.map((chapter, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <span className="text-sm text-foreground">{chapter.title}</span>
-                      <span className="text-xs text-muted-foreground">p.{chapter.page}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {pdfInfo.metadata?.length ? (
-              <div className="pt-4 border-t border-border">
-                <div className="grid grid-cols-3 gap-3">
-                  {pdfInfo.metadata.map((item, i) => (
-                    <div key={i} className="text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">{item.label}</p>
-                      <p className="text-sm font-semibold text-foreground mt-1">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center italic">Connect your backend to populate with actual PDF data.</p>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </Card>
     </div>
   )
