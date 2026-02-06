@@ -119,13 +119,16 @@ export function useJobProgress(jobId: string | null) {
     const clipsQ = query(collection(db, "jobs", jobId, "clips"))
     const unsubClips = onSnapshot(clipsQ, (snap) => {
       let done = 0
-      const total = snap.size
+      let total = 0
 
       snap.forEach((d) => {
         const data: any = d.data()
         const st = String(data.status ?? "").toUpperCase()
         // 和你旧逻辑一致：READY 视作 clip 完成
         if (st === "READY") done += 1
+
+        const t = Number(data.total)
+        if (Number.isFinite(t)) total = Math.max(total, t)
       })
 
       setDoneClips(done)
