@@ -103,13 +103,15 @@ export function useJobProgress(jobId: string | null) {
       if (!snap.exists()) return
       const j: any = snap.data()
 
-      const k = toProgressKeyFromJob(j)
-      if (k) setProgressKey(k)
-
       // 这个 message 可选：用于 UI 小字显示
-      const status = j.status ?? ""
+      const status = String(j?.status ?? "").toUpperCase()
       const step = j.current_step ?? ""
       const msg = j.message ?? ""
+
+      if (status === "COMPLETED") {
+        const k = toProgressKeyFromJob(j)
+        if (k) setProgressKey(k)
+      }
       setMessage([status && `Status: ${status}`, step && `Step: ${step}`, msg].filter(Boolean).join(" | "))
     })
 

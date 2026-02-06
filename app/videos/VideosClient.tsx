@@ -34,17 +34,31 @@ export default function VideosClient() {
   // 4) run progress bar
   const { pct, label, message } = useJobProgress(jobId)
 
-  // 5) Info panel pinned + blocks (MVP interactive mock)
-  const [pinned, setPinned] = React.useState({ 
-    title: "",
-    pageCount: 0,
-  })
+  // 5) Info panel (production): start empty, fill via Firestore + step-preview
+  const [pinned, setPinned] = React.useState<{ title?: string; pageCount?: number }>({})
+  const [blocks, setBlocks] = React.useState<
+    { step: string; ts: number; data: Record<string, any>; uri?: string }[]
+  >([])
 
-  const [blocks, setBlocks] = React.useState([
-    { step: "doc_ir", ts: Date.now() - 5000, data: { title: "Demo Paper", page_count: 20 } },
-    { step: "sketch", ts: Date.now() - 2000, data: { abstract_summary: "This paper shows..." } },
-  ])
-  // Step 5 end
+  const appendInfoBlock = React.useCallback(
+    (b: { step: string; ts: number; data: Record<string, any>; uri?: string }) => {
+      setBlocks((prev) => [...prev, b])
+    },
+    []
+  )
+
+  const setPinnedMeta = React.useCallback(
+    (updater: (p: { title?: string; pageCount?: number }) => { title?: string; pageCount?: number }) => {
+      setPinned((prev) => updater(prev))
+    },
+    []
+  )
+
+  // optional: when jobId changes, reset the panel (good hygiene)
+  React.useEffect(() => {
+    setPinned({})
+    setBlocks([])
+  }, [jobId])
 
   // Auto-select first video once videos loaded (avoid using `player` object as dependency)
   React.useEffect(() => {
@@ -60,6 +74,8 @@ export default function VideosClient() {
     setJobStatusText,
     setVideos,
     setSelectedVideo: player.setSelectedVideo,
+    appendInfoBlock,
+    setPinnedMeta,
   })
 
   // 5) chat state
