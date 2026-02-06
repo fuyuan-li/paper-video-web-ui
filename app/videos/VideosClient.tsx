@@ -42,7 +42,13 @@ export default function VideosClient() {
 
   const appendInfoBlock = React.useCallback(
     (b: { step: string; ts: number; data: Record<string, any>; uri?: string }) => {
-      setBlocks((prev) => [...prev, b])
+      setBlocks(prev => {
+        const i = prev.findIndex(x => x.step === b.step)
+        if (i === -1) return [...prev, b]                // 第一次出现：append
+        const next = prev.slice()
+        next[i] = b                                      // 重复出现：replace（去重）
+        return next
+      })
     },
     []
   )
