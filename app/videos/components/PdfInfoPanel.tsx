@@ -46,7 +46,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
               </div>
 
               <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="uppercase tracking-wide text-xs">Pages</span>
+                <span className="uppercase tracking-wide text-xs">Total Pages</span>
                 <span className="px-2 py-0.5 rounded-md bg-muted text-foreground font-semibold">{pagesText}</span>
               </div>
             </div>

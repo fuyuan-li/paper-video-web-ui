@@ -48,7 +48,7 @@ export function useJobProgress(jobId: string | null) {
       // ✅ SUCCEEDED forces 100%
       if (status === "SUCCEEDED") {
         setPct(100)
-        setLabel(step ? `SUCCEEDED • ${step}` : "SUCCEEDED")
+        setLabel("SUCCEEDED")
         return
       }
 

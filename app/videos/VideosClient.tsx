@@ -72,6 +72,7 @@ export default function VideosClient() {
   }, [jobId, pct, progressStartedAt])
 
   const etaText = React.useMemo(() => {
+    if (typeof pct === "number" && pct >= 100) return "Video Ready!"
     if (typeof pct === "number" && pct >= 99) return "Finalizing…"
 
     // Fixed ETA 5min
@@ -192,7 +193,7 @@ export default function VideosClient() {
                   <p className="text-xs text-muted-foreground">Video will be ready in approx. 5 mins</p>
                 )}
               </Card>
-              <div className="h-[475px] overflow-auto">
+              <div className="h-[473px] overflow-auto">
                 <PdfInfoPanel pinned={pinned} blocks={blocks} />
               </div>
             </div>
