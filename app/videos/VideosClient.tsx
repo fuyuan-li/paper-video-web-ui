@@ -23,6 +23,16 @@ import { JobProgressBar } from "./components/JobProgressBar"
 export default function VideosClient() {
   const searchParams = useSearchParams()
   const jobId = searchParams.get("job_id")
+  if (!jobId) {
+    return (
+      <main className="min-h-screen bg-background">
+        <VideosHeader />
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <EmptyState />
+        </div>
+      </main>
+    )
+  }
 
   // 1) start pipeline once (and expose status text)
   const { jobStatusText, setJobStatusText } = useRunPipeline(jobId)
@@ -40,25 +50,29 @@ export default function VideosClient() {
   const [progressStartedAt, setProgressStartedAt] = React.useState<number | null>(null)
 
   React.useEffect(() => {
+    if (jobId) sessionStorage.setItem("last_job_id", jobId)
+  }, [jobId])
+
+  React.useEffect(() => {
     if (!jobId) {
       setProgressStartedAt(null)
       return
     }
-    // 当我们第一次拿到一个有效 pct，就认为 progress 计时开始
+    // When we first get a valid pct, consider progress timing started
     if (typeof pct === "number" && pct > 0 && progressStartedAt == null) {
       setProgressStartedAt(Date.now())
     }
-    // 如果 job 重新开始（pct 回到 0），重置计时
+    // If job restarts (pct goes back to 0), reset timing
     if (typeof pct === "number" && pct === 0) {
       setProgressStartedAt(Date.now())
     }
   }, [jobId, pct, progressStartedAt])
 
   const etaText = React.useMemo(() => {
-    // 完成/接近完成时的文案
+    // Message when completion/near completion
     if (typeof pct === "number" && pct >= 99) return "Finalizing…"
 
-    // 如果还没开始有 pct，用一个保守默认（你说的 5mins）
+    // If pct hasn't started yet, use a conservative default (you mentioned 5 mins)
     if (typeof pct !== "number" || pct <= 0 || !progressStartedAt) {
       return "Video will be ready in approx. 5 mins"
     }
@@ -66,18 +80,18 @@ export default function VideosClient() {
     const elapsedMs = Date.now() - progressStartedAt
     const elapsedMin = elapsedMs / 60000
 
-    // 用进度估算总耗时： total ~= elapsed / (pct/100)
-    // 再算剩余： remaining = total - elapsed
+    // Estimate total time from progress: total ~= elapsed / (pct/100)
+    // Then calculate remaining: remaining = total - elapsed
     const frac = Math.max(pct, 1) / 100
     const totalMin = elapsedMin / frac
     let remainingMin = totalMin - elapsedMin
 
-    // 把 ETA 限制在合理范围，避免早期 pct 很小导致 ETA 巨大
+    // Limit ETA to reasonable bounds to avoid huge ETA when pct is small early on
     remainingMin = Math.min(Math.max(remainingMin, 0.5), 30)
 
     const rounded = Math.round(remainingMin)
 
-    // 在前 1 分钟以内用 “< 1 min”
+    // Use "< 1 min" for the first minute
     if (remainingMin < 1) return "Video will be ready in < 1 min"
     return `Video will be ready in approx. ${rounded} mins`
   }, [pct, progressStartedAt])

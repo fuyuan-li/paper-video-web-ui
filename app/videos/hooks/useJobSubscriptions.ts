@@ -12,8 +12,6 @@ export function useJobSubscriptions(args: {
   setJobStatusText: (s: string) => void
   setVideos: (v: VideoClip[]) => void
   setSelectedVideo: (v: VideoClip | null) => void
-
-  // ✅ new: info panel updates
   appendInfoBlock: (b: InfoBlock) => void
   setPinnedMeta: (updater: (p: PinnedMeta) => PinnedMeta) => void
 }) {
@@ -26,117 +24,128 @@ export function useJobSubscriptions(args: {
     setPinnedMeta,
   } = args
 
+  // Steps already processed (for replay + deduplication)
+  const seenStepsRef = useRef<Set<string>>(new Set())
+
+  // Merged video deduplication
   const requestedMergedRef = useRef(false)
   const requestedMergedUriRef = useRef<string | null>(null)
 
-  // ✅ new: prevent spamming same step-preview call
-  const lastRequestedStepRef = useRef<string | null>(null)
-
   useEffect(() => {
     if (!jobId) return
-
     let isActive = true
 
-    const unsubJob = onSnapshot(doc(db, "jobs", jobId), (snap) => {
+    const unsub = onSnapshot(doc(db, "jobs", jobId), async (snap) => {
       if (!snap.exists()) return
       const j: any = snap.data()
 
-      const status = j.status ?? ""
+      const dagStatus = j.status ?? ""
       const step = j.current_step ?? ""
+      const stepStatus = j.current_step_status ?? ""
       const msg = j.message ?? ""
 
       setJobStatusText(
-        [status && `Status: ${status}`, step && `Step: ${step}`, msg]
+        [
+          dagStatus && `Status: ${dagStatus}`,
+          step && `Step: ${step}${stepStatus ? ` (${stepStatus})` : ""}`,
+          msg,
+        ]
           .filter(Boolean)
           .join(" | ")
       )
 
-      // ✅ MVP trigger: whenever current_step changes, try fetching step preview
-      // (If backend not ready yet, it may return 404; we just ignore.)
-      if (!step) return
-      // Only respond when step is successful
-      if (status !== "COMPLETED") return
-      if (lastRequestedStepRef.current === step) return
-      lastRequestedStepRef.current = step
+      // -------- replay completed steps --------
+      const stepsDone: string[] = Array.isArray(j.steps_done) ? j.steps_done : []
 
-      ;(async () => {
-        try {
-          const resp = await fetch(
-            `/api/jobs/${encodeURIComponent(jobId)}/step-preview?step=${encodeURIComponent(step)}`,
-            { method: "GET" }
-          )
-          if (!resp.ok) {
-            // Common case: step-preview not available yet, ignore quietly
-            // You can console.log if you want visibility:
-            // console.log("step-preview not ready", step, resp.status)
-            return
-          }
-          const json = await resp.json()
-          const data = json?.data ?? {}
-          const uri = json?.uri
+      for (const s of stepsDone) {
+        if (!s) continue
+        if (seenStepsRef.current.has(s)) continue
+        seenStepsRef.current.add(s)
 
-          if (!isActive) return
-          
-          // update pinned meta for doc_ir
-          if (step === "doc_ir") {
-            const title = data?.title
-            const pageCount = data?.page_count
-            setPinnedMeta((p) => ({
-              ...p,
-              title: typeof title === "string" ? title : p.title,
-              pageCount: typeof pageCount === "number" ? pageCount : p.pageCount,
-            }))
-          } else {
-            // append block (for the scrolling info panel)
-            appendInfoBlock({
-              step,
-              ts: Date.now(),
-              data,
-              uri,
-            })
+        // Fetch step preview (replay or incremental)
+        ;(async () => {
+          try {
+            const resp = await fetch(
+              `/api/jobs/${encodeURIComponent(jobId)}/step-preview?step=${encodeURIComponent(s)}`,
+              { method: "GET" }
+            )
+            if (!resp.ok) return
+
+            const json = await resp.json()
+            const data = json?.data ?? {}
+            const uri = json?.uri
+            if (!isActive) return
+
+            if (s === "doc_ir") {
+              const title = data?.title
+              const pageCount = data?.page_count
+              setPinnedMeta((p) => ({
+                ...p,
+                title: typeof title === "string" ? title : p.title,
+                pageCount: typeof pageCount === "number" ? pageCount : p.pageCount,
+              }))
+            } else {
+              appendInfoBlock({
+                step: s,
+                ts: Date.now(),
+                data,
+                uri,
+              })
+            }
+          } catch (e) {
+            console.error("step-preview fetch failed", s, e)
           }
-        } catch (e) {
-          console.error("step-preview fetch failed", step, e)
+        })()
+      }
+
+      // -------- merged video restore --------
+      const mergeStatus = String(j.merge_status ?? "").toLowerCase()
+      const key = j.output_gcs_path as string | undefined
+
+      if (mergeStatus === "completed" && key) {
+        if (
+          !requestedMergedRef.current ||
+          requestedMergedUriRef.current !== key
+        ) {
+          requestedMergedRef.current = true
+          requestedMergedUriRef.current = key
+
+          try {
+            const su = await fetch(
+              `/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(key)}`
+            )
+            if (!su.ok) throw new Error(await su.text())
+            const suJson = await su.json()
+            const url = suJson.url
+            if (!url) throw new Error("missing signed url")
+
+            const mergedVideo: VideoClip = {
+              id: "merged",
+              title: "Merged Video",
+              url,
+            }
+            setVideos([mergedVideo])
+            setSelectedVideo(mergedVideo)
+          } catch (e) {
+            console.error("signed-url failed", e)
+          }
         }
-      })()
-    })
-
-    const unsubMerged = onSnapshot(doc(db, "jobs", jobId), async (snap) => {
-      if (!snap.exists()) return
-      const data: any = snap.data()
-
-      const mergeStatus = String(data.merge_status ?? "").toLowerCase()
-      const key = data.output_gcs_path as string | undefined
-
-      if (mergeStatus !== "completed" || !key) return
-
-      if (requestedMergedRef.current && requestedMergedUriRef.current === key) return
-      requestedMergedRef.current = true
-      requestedMergedUriRef.current = key
-
-      try {
-        const su = await fetch(
-          `/api/jobs/${encodeURIComponent(jobId)}/signed-url?key=${encodeURIComponent(key)}`
-        )
-        if (!su.ok) throw new Error(await su.text())
-
-        const suJson = await su.json()
-        const url = suJson.url
-        if (!url) throw new Error(`missing url: ${JSON.stringify(suJson)}`)
-
-        const mergedVideo: VideoClip = { id: "merged", title: "Merged Video", url }
-        setVideos([mergedVideo])
-        setSelectedVideo(mergedVideo)
-      } catch (e) {
-        console.error("signed-url failed for merged video", e)
       }
     })
 
     return () => {
       isActive = false
-      unsubJob()
-      unsubMerged()
-      lastRequestedStepRef.current = null
+      unsub()
+      seenStepsRef.current.clear()
+      requestedMergedRef.current = false
+      requestedMergedUriRef.current = null
     }
-  }, [jobId, setJobStatusText, setVideos, setSelectedVideo, appendInfoBlock, setPinnedMeta])
+  }, [
+    jobId,
+    setJobStatusText,
+    setVideos,
+    setSelectedVideo,
+    appendInfoBlock,
+    setPinnedMeta,
+  ])
 }

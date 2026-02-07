@@ -77,6 +77,19 @@ export default function UploadPage() {
     }
   }
 
+  const handleMyVideos = React.useCallback(() => {
+    try {
+      const last = sessionStorage.getItem("last_job_id")
+      if (last) {
+        router.push(`/videos?job_id=${encodeURIComponent(last)}`)
+      } else {
+        router.push("/videos") // will render <EmptyState />
+      }
+    } catch {
+      router.push("/videos")
+    }
+  }, [router])
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -87,12 +100,13 @@ export default function UploadPage() {
             <span className="text-xl font-bold text-foreground">The BoardBook: Turn a scientific literature into explanatory video</span>
           </div>
           <nav className="flex items-center gap-6">
-            <a href="/" className="font-medium text-foreground hover:text-accent transition-colors">
-              Upload
-            </a>
-            <a href="/videos" className="font-medium text-muted-foreground hover:text-accent transition-colors">
+            <button
+              type="button"
+              onClick={handleMyVideos}
+              className="font-medium text-muted-foreground hover:text-accent transition-colors"
+            >
               My Videos
-            </a>
+            </button>
           </nav>
         </div>
       </header>
