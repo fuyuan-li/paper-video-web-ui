@@ -36,6 +36,52 @@ export default function VideosClient() {
   // 4) run progress bar
   const { pct, label, message } = useJobProgress(jobId)
 
+  // ---- ETA (approx) for progress section ----
+  const [progressStartedAt, setProgressStartedAt] = React.useState<number | null>(null)
+
+  React.useEffect(() => {
+    if (!jobId) {
+      setProgressStartedAt(null)
+      return
+    }
+    // 当我们第一次拿到一个有效 pct，就认为 progress 计时开始
+    if (typeof pct === "number" && pct > 0 && progressStartedAt == null) {
+      setProgressStartedAt(Date.now())
+    }
+    // 如果 job 重新开始（pct 回到 0），重置计时
+    if (typeof pct === "number" && pct === 0) {
+      setProgressStartedAt(Date.now())
+    }
+  }, [jobId, pct, progressStartedAt])
+
+  const etaText = React.useMemo(() => {
+    // 完成/接近完成时的文案
+    if (typeof pct === "number" && pct >= 99) return "Finalizing…"
+
+    // 如果还没开始有 pct，用一个保守默认（你说的 5mins）
+    if (typeof pct !== "number" || pct <= 0 || !progressStartedAt) {
+      return "Video will be ready in approx. 5 mins"
+    }
+
+    const elapsedMs = Date.now() - progressStartedAt
+    const elapsedMin = elapsedMs / 60000
+
+    // 用进度估算总耗时： total ~= elapsed / (pct/100)
+    // 再算剩余： remaining = total - elapsed
+    const frac = Math.max(pct, 1) / 100
+    const totalMin = elapsedMin / frac
+    let remainingMin = totalMin - elapsedMin
+
+    // 把 ETA 限制在合理范围，避免早期 pct 很小导致 ETA 巨大
+    remainingMin = Math.min(Math.max(remainingMin, 0.5), 30)
+
+    const rounded = Math.round(remainingMin)
+
+    // 在前 1 分钟以内用 “< 1 min”
+    if (remainingMin < 1) return "Video will be ready in < 1 min"
+    return `Video will be ready in approx. ${rounded} mins`
+  }, [pct, progressStartedAt])
+
   // 5) Info panel (production): start empty, fill via Firestore + step-preview
   const [pinned, setPinned] = React.useState<{ title?: string; pageCount?: number }>({})
   const [blocks, setBlocks] = React.useState<
@@ -134,10 +180,14 @@ export default function VideosClient() {
             <div className="lg:col-span-2 flex flex-col gap-3">
               <Card className="border-2 border-border bg-card p-3">
                 {typeof pct === "number" && label ? (
-                  <JobProgressBar pct={pct} label={label} message={message} />
-                ) : null}
+                  <div className="space-y-2">
+                    <JobProgressBar pct={pct} label={label} message={message} />
+                    <p className="text-xs text-muted-foreground">{etaText}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Video will be ready in approx. 5 mins</p>
+                )}
               </Card>
-
               <PdfInfoPanel pinned={pinned} blocks={blocks} />
             </div>
 
