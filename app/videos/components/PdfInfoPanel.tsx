@@ -25,7 +25,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
     el.scrollTo({top: el.scrollHeight, behavior: "smooth" })
   }, [blocks.length])
 
-  const titleText = useMemo(() => pinned.title?.trim() || "Document title (pending)", [pinned.title])
+  const titleText = useMemo(() => pinned.title?.trim() || "", [pinned.title])
   const pagesText = useMemo(
     () => (typeof pinned.pageCount === "number" ? String(pinned.pageCount) : "—"),
     [pinned.pageCount]
