@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { VideoClip } from "../lib/types"
 import { formatTime } from "../lib/format"
-import { JobProgressBar } from "../components/JobProgressBar"
 
 type Props = {
   videos: VideoClip[]
@@ -17,10 +16,6 @@ type Props = {
   isMuted: boolean
   currentTime: number
   duration: number
-
-  progressPct?: number
-  progressLabel?: string
-  progressMessage?: string
 
   onTogglePlay: () => void
   onSetPlaying: (v: boolean) => void
@@ -49,9 +44,6 @@ export function VideoSection(props: Props) {
     isMuted,
     currentTime,
     duration,
-    progressPct,
-    progressLabel,
-    progressMessage,
     onTogglePlay,
     onSetPlaying,
     onTimeUpdate,
@@ -154,54 +146,6 @@ export function VideoSection(props: Props) {
                 </a>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Info */}
-        {selectedVideo && (
-          <div className="border-t-2 border-border p-4">
-            <h2 className="text-lg font-semibold text-foreground">{selectedVideo.title}</h2>
-            {selectedVideo.duration && <p className="text-sm text-muted-foreground">Duration: {selectedVideo.duration}</p>}
-          </div>
-        )}
-      </Card>
-
-      {/* Job progress */}
-      <Card className="border-2 border-border bg-card p-3 mt-3 flex-shrink-0">
-{typeof progressPct === "number" && progressLabel ? (
-        <JobProgressBar
-          pct={progressPct}
-          label={progressLabel}
-          message={progressMessage}
-        />
-      ) : null}
-      </Card>
-      
-
-      {/* Clips strip */}
-      <Card className="border-2 border-border bg-card p-3 mt-3 flex-shrink-0">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Clips ({videos.length})</h3>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-accent/50 scrollbar-track-muted
-            [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-muted
-            [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-accent/50 hover:[&::-webkit-scrollbar-thumb]:bg-accent">
-            {videos.map((v, index) => (
-              <button
-                key={v.id}
-                onClick={() => onSelectVideo(v)}
-                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
-                  selectedVideo?.id === v.id ? "border-accent bg-accent/5" : "border-border bg-card hover:border-accent/50"
-                }`}
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-muted-foreground">
-                  <Play className="h-3.5 w-3.5" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-foreground text-xs truncate max-w-[100px]">{v.title}</p>
-                  <p className="text-xs text-muted-foreground">Clip {index + 1}</p>
-                </div>
-              </button>
-            ))}
           </div>
         </div>
       </Card>

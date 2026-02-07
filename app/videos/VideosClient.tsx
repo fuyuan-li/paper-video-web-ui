@@ -17,6 +17,8 @@ import { EmptyState } from "./components/EmptyState"
 import { VideoSection } from "./components/VideoSection"
 import { PdfInfoPanel } from "./components/PdfInfoPanel"
 import { ChatWidget } from "./components/ChatWidget"
+import { Card } from "@/components/ui/card"
+import { JobProgressBar } from "./components/JobProgressBar"
 
 export default function VideosClient() {
   const searchParams = useSearchParams()
@@ -127,12 +129,15 @@ export default function VideosClient() {
               onPrevVideo={player.playPreviousVideo}
               onNextVideo={player.playNextVideo}
               onSelectVideo={player.selectVideo}
-              progressPct={pct}
-              progressLabel={label}
-              progressMessage={message}
             />
 
             <div className="lg:col-span-2 flex flex-col gap-3">
+              <Card className="border-2 border-border bg-card p-3">
+                {typeof pct === "number" && label ? (
+                  <JobProgressBar pct={pct} label={label} message={message} />
+                ) : null}
+              </Card>
+
               <PdfInfoPanel pinned={pinned} blocks={blocks} />
             </div>
 
