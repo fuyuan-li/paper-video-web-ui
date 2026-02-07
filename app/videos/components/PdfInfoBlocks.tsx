@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import ReactMarkdown from "react-markdown"
 
 export type InfoBlock = {
   step: string
@@ -12,7 +13,7 @@ export type InfoBlock = {
 export function BlockRenderer({ block }: { block: InfoBlock }) {
   const { step, data } = block
 
-  // 你说只会有 3-4 个 blocks：这里就手写定制渲染（很 OK）
+  // You mentioned there would only be 3-4 blocks: we'll use custom rendering here (totally fine)
   if (step === "doc_ir") {
     const title = data?.title
     const pages = data?.page_count
@@ -39,7 +40,49 @@ export function BlockRenderer({ block }: { block: InfoBlock }) {
     )
   }
 
-  // fallback：你后续再逐个美化
+    if (step === "world") {
+    const worldName = String(data?.world_name ?? "").trim()
+    const msg = String(data?.msg ?? "").trim()
+
+    const why_fits: string[] = Array.isArray(data?.why_fits)
+        ? data.why_fits.map((k: any) =>
+            String(k)
+        )
+        : []
+
+    const title = worldName
+        ? `Analogy world: ${worldName}`
+        : "Analogy world"
+
+    return (
+        <div className="space-y-2">
+        {/* Title: same level as Abstract summary */}
+        <div className="text-sm font-semibold text-foreground">
+            {title}
+        </div>
+
+        {/* Main message */}
+        {msg ? (
+            <div className="text-sm text-muted-foreground leading-relaxed">
+            <ReactMarkdown>{msg}</ReactMarkdown>
+            </div>
+        ) : (
+            <p className="text-sm text-muted-foreground">(pending)</p>
+        )}
+
+        {/* why_fits bullets */}
+        {why_fits.length ? (
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+            {why_fits.map((c, i) => (
+                <li key={`${c}-${i}`}>{c}</li>
+            ))}
+            </ul>
+        ) : null}
+        </div>
+    )
+    }
+
+  // Fallback: you can customize each one later
   return (
     <div className="space-y-2">
       <div className="text-sm font-semibold text-foreground">{step}</div>
