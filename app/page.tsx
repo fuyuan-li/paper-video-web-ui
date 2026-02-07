@@ -14,6 +14,7 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [fileError, setFileError] = useState<string>("")
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -28,16 +29,29 @@ export default function UploadPage() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
+
     const droppedFile = e.dataTransfer.files[0]
-    if (droppedFile?.type === "application/pdf") {
+    if (!droppedFile) return
+
+    if (droppedFile.type === "application/pdf") {
       setFile(droppedFile)
+      setFileError("")
+    } else {
+      setFile(null)
+      setFileError("Sorry — we currently only support PDF uploads.")
     }
   }, [])
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
-    if (selectedFile?.type === "application/pdf") {
+    if (!selectedFile) return
+
+    if (selectedFile.type === "application/pdf") {
       setFile(selectedFile)
+      setFileError("")
+    } else {
+      setFile(null)
+      setFileError("Sorry — we currently only support PDF uploads.")
     }
   }, [])
 
@@ -97,7 +111,7 @@ export default function UploadPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <Video className="h-6 w-6 text-accent" />
-            <span className="text-xl font-bold text-foreground">The BoardBook: Turn a scientific literature into explanatory video</span>
+            <span className="text-xl font-bold text-foreground">The BoardBook — Research, a video story for everyone</span>
           </div>
           <nav className="flex items-center gap-6">
             <button
@@ -112,13 +126,13 @@ export default function UploadPage() {
       </header>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-4xl px-6 py-16">
+      <div className="mx-auto max-w-5xl px-6 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-foreground mb-4 text-balance">
-            Transform Your PDFs Into Engaging Videos
+          <h1 className="text-[40px] lg:text-5xl font-bold text-foreground mb-4 text-balance">
+            Turn a research paper into a video story anyone can understand
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Upload your document and let our system convert it into multiple video clips ready for sharing.
+          <p className="text-lg text-muted-foreground max-w-4xl mx-auto">
+            Upload a research paper or technical PDF. We understand it first — then generate a ~60–90s explainer video to help non-experts grasp the core idea.
           </p>
         </div>
 
@@ -187,6 +201,12 @@ export default function UploadPage() {
               )}
             </div>
 
+            {fileError && (
+              <div className="text-sm text-red-600">
+                {fileError}
+              </div>
+            )}
+
             {/* Progress Bar */}
             {isUploading && (
               <div className="space-y-2">
@@ -228,16 +248,16 @@ export default function UploadPage() {
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
             {
-              title: "Upload PDF",
-              description: "Select or drag your PDF document to get started",
+              title: "Upload a Paper",
+              description: "Select a research or technical PDF to get started.",
             },
             {
-              title: "Processing",
-              description: "Our system analyzes and converts your content",
+              title: "Understand, Then Explain",
+              description: "We read the paper, then reframe it into a story anyone can follow.",
             },
             {
-              title: "Get Videos",
-              description: "Download or play your generated video clips",
+              title: "Get Explainer Video",
+              description: "A short video that makes the paper easy to grasp.",
             },
           ].map((item, index) => (
             <div key={index} className="text-center">
