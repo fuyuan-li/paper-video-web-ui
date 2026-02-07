@@ -33,14 +33,19 @@ export function useRunPipeline(jobId: string | null) {
           return
         }
 
-        // ✅ Non-FAILED: assume already started/running/queued, don't rerun
-        if (status !== "FAILED") {
-          setJobStatusText(`Pipeline ${status ? status.toLowerCase() : "running"} (listening for updates)...`)
+        // ✅ RECEIVED: start first run
+        if (status === "RECEIVED" || !status) {
+          setJobStatusText("Pipeline — starting...")
+          // Continue to fetch /api/run
+        } else if (status !== "FAILED") {
+          // ✅ Non-FAILED and not RECEIVED: assume already started
+          setJobStatusText(`Pipeline ${status.toLowerCase()} (listening for updates)...`)
           return
+        } else {
+          // ✅ FAILED: allow rerun
+          setJobStatusText("Pipeline failed — restarting...")
+          // Continue to fetch /api/run // TODO: need force=true?
         }
-
-        // ✅ FAILED: allow rerun (recommend force=true)
-        setJobStatusText("Pipeline failed — restarting...")
 
         const resp = await fetch("/api/run", {
           method: "POST",
@@ -48,7 +53,7 @@ export function useRunPipeline(jobId: string | null) {
           body: JSON.stringify({
             job_id: jobId,
             target: "merge",
-            force: true,
+            force: false,
             video_request: {
               scene_ids: [],
               dry_run: false,
