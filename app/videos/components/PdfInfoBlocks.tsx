@@ -40,7 +40,7 @@ export function BlockRenderer({ block }: { block: InfoBlock }) {
     )
   }
 
-    if (step === "world") {
+  if (step === "world") {
     const worldName = String(data?.world_name ?? "").trim()
     const msg = String(data?.msg ?? "").trim()
 
@@ -80,7 +80,113 @@ export function BlockRenderer({ block }: { block: InfoBlock }) {
         ) : null}
         </div>
     )
-    }
+  }
+
+    // --- Glossary block renderer ---
+    // Expects data shape:
+    // {
+    //   title: string,
+    //   intro?: string,
+    //   items: Array<{
+    //     term: string,
+    //     paper_definition?: string,   // clean definition only
+    //     world_hook?: string,         // clean hook only
+    //     url?: string
+    //   }>,
+    //   outro?: string
+    // }
+  if (step === "glossary") {
+    const title = String(data?.title ?? "Glossary").trim()
+    const intro = String(data?.intro ?? "").trim()
+    const outro = String(data?.outro ?? "").trim()
+    const items: any[] = Array.isArray(data?.items) ? data.items : []
+
+    return (
+        <div className="space-y-2">
+        {/* Title */}
+        <div className="text-sm font-semibold text-foreground">
+            {title}
+        </div>
+
+        {/* Intro */}
+        {intro ? (
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+            {intro}
+            </p>
+        ) : null}
+        <div className="space-y-2 pb-3 border-b border-border/40 last:border-b-0" />
+
+        {/* Items */}
+        {items.length ? (
+            <div className="space-y-3">
+            {items.map((it, idx) => {
+                const term = String(it?.term ?? "").trim()
+                const paperDef = String(it?.paper_definition ?? "").trim()
+                const worldHook = String(it?.world_hook ?? "").trim()
+                const url = String(it?.url ?? "").trim()
+
+                return (
+                <div
+                    key={`${term || "term"}-${idx}`}
+                    className="space-y-2 pb-3 border-b border-border/40 last:border-b-0"
+                >
+                    {/* Term heading */}
+                    <div className="text-sm font-semibold text-foreground">
+                    {term || "(term)"}
+                    </div>
+
+                    {/* In the paper */}
+                    {paperDef ? (
+                    <div className="space-y-1">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-muted/40 text-muted-foreground font-medium">
+                        IN THE PAPER
+                        </span>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {paperDef}
+                        </p>
+                    </div>
+                    ) : null}
+
+                    {/* In the analogy */}
+                    {worldHook ? (
+                    <div className="space-y-1">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent font-medium">
+                        IN THE VIDEO
+                        </span>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {worldHook}
+                        </p>
+                    </div>
+                    ) : null}
+
+                    {/* Link */}
+                    {url ? (
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm underline text-muted-foreground hover:text-foreground"
+                    >
+                        Search this term
+                    </a>
+                    ) : null}
+                </div>
+                )
+            })}
+            </div>
+        ) : (
+            <p className="text-sm text-muted-foreground">(pending)</p>
+        )}
+
+        {/* Outro */}
+        {outro ? (
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+            {outro}
+            </p>
+        ) : null}
+        </div>
+    )
+  }
 
   // Fallback: you can customize each one later
   return (
