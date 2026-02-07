@@ -143,13 +143,6 @@ export default function VideosClient() {
       <VideosHeader />
 
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Upload
-        </Link>
 
         {videos.length === -1 ? (
           <EmptyState />
