@@ -95,23 +95,100 @@ export default function VideosClient() {
   }, [pct, progressStartedAt])
 
   // 5) Info panel (production): start empty, fill via Firestore + step-preview
+  type UiInfoBlock = {
+    id?: string
+    step: string
+    ts: number
+    data: Record<string, any>
+    uri?: string
+  }
   const [pinned, setPinned] = React.useState<PinnedMeta>({})
-  const [blocks, setBlocks] = React.useState<
-    { step: string; ts: number; data: Record<string, any>; uri?: string }[]
-  >([])
+  const [blocks, setBlocks] = React.useState<UiInfoBlock[]>([])
+  const pendingBlocksRef = React.useRef<UiInfoBlock[]>([])
+
+
 
   const appendInfoBlock = React.useCallback(
-    (b: { step: string; ts: number; data: Record<string, any>; uri?: string }) => {
-      setBlocks(prev => {
-        const i = prev.findIndex(x => x.step === b.step)
-        if (i === -1) return [...prev, b]                // First occurrence: append
-        const next = prev.slice()
-        next[i] = b                                      // Duplicate: replace (deduplicate)
-        return next
-      })
+    (b: UiInfoBlock) => {
+      // --- Special: expand glossary into multiple queued chunks ---
+      if (b.step === "glossary") {
+        const title = String(b.data?.title ?? "Glossary").trim()
+        const intro = String(b.data?.intro ?? "").trim()
+        const outro = String(b.data?.outro ?? "").trim()
+        const items: any[] = Array.isArray(b.data?.items) ? b.data.items : []
+
+        const chunks: any[] = []
+        const base = `glossary:${b.ts}` // Use this glossary's timestamp as version prefix
+
+        let seq = 0
+        if (intro) {
+          chunks.push({
+            id: `${base}:${seq++}:intro`,
+            step: "glossary",
+            ts: b.ts + seq,
+            data: { kind: "intro", title, text: intro },
+          })
+        }
+
+        items.forEach((it, idx) => {
+          chunks.push({
+            id: `${base}:${seq++}:item:${idx}`,
+            step: "glossary",
+            ts: b.ts + seq,
+            data: { kind: "item", item: it },
+          })
+        })
+
+        if (outro) {
+          chunks.push({
+            id: `${base}:${seq++}:outro`,
+            step: "glossary",
+            ts: b.ts + seq,
+            data: { kind: "outro", text: outro },
+          })
+        }
+
+        // ✅ Directly append to pending queue, maintain order
+        pendingBlocksRef.current = [...pendingBlocksRef.current, ...chunks]
+        return
+      }
+
+      // --- Default: other steps keep "latest-only per step" in pending ---
+      const q = pendingBlocksRef.current
+      pendingBlocksRef.current = [...q.filter(x => x.step !== b.step), b]
     },
-    []
+    [setBlocks]
   )
+  // Every x-second give 1 block to UI
+  React.useEffect(() => {
+    const id = window.setInterval(() => {
+      const q = pendingBlocksRef.current
+      if (q.length === 0) return
+
+      const next = q[0]
+      pendingBlocksRef.current = q.slice(1)
+
+      // de-dup blocks
+      setBlocks(prev => {
+        // ✅ If has id: deduplicate by id (replace same id), else deduplicate by step (replace same step)
+        if (next.id) {
+          const i = prev.findIndex(x => x.id === next.id)
+          if (i === -1) return [...prev, next]   // append
+          const copy = prev.slice()
+          copy[i] = next
+          return copy
+        } else {
+          const i = prev.findIndex(x => x.step === next.step)
+          if (i === -1) return [...prev, next]
+          const copy = prev.slice()
+          copy[i] = next
+          return copy
+        }
+      })
+    }, 3000) // x=300(ms) - speed of refresh
+
+    return () => window.clearInterval(id)
+  }, [])
 
   const setPinnedMeta = React.useCallback(
     (updater: (p: { title?: string; pageCount?: number }) => { title?: string; pageCount?: number }) => {
@@ -124,6 +201,7 @@ export default function VideosClient() {
   React.useEffect(() => {
     setPinned({})
     setBlocks([])
+    pendingBlocksRef.current = []
   }, [jobId])
 
   // Auto-select first video once videos loaded (avoid using `player` object as dependency)

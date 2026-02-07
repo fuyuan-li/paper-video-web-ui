@@ -71,7 +71,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
           ) : (
             <div className="divide-y divide-border/60">
               {blocks.map((block, idx) => (
-                <div key={`${block.step}-${block.ts}-${idx}`} className="py-4">
+                <div key={block.id ?? `${block.step}-${block.ts}-${idx}`} className="py-4">
                   <BlockRenderer block={block} />
                 </div>
               ))}
