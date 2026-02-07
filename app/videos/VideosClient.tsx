@@ -34,6 +34,10 @@ export default function VideosClient() {
     )
   }
 
+  React.useEffect(() => {
+    if (jobId) sessionStorage.setItem("last_job_id", jobId)
+  }, [jobId])
+
   // 1) start pipeline once (and expose status text)
   const { jobStatusText, setJobStatusText } = useRunPipeline(jobId)
 
@@ -48,10 +52,9 @@ export default function VideosClient() {
 
   // ---- ETA (approx) for progress section ----
   const [progressStartedAt, setProgressStartedAt] = React.useState<number | null>(null)
-
-  React.useEffect(() => {
-    if (jobId) sessionStorage.setItem("last_job_id", jobId)
-  }, [jobId])
+  // ---- ETA smoothing + cap ----
+  const etaEmaRef = React.useRef<number | null>(null)      // minutes
+  const etaLastUpdateRef = React.useRef<number>(0)         // ms timestamp
 
   React.useEffect(() => {
     if (!jobId) {
@@ -69,31 +72,45 @@ export default function VideosClient() {
   }, [jobId, pct, progressStartedAt])
 
   const etaText = React.useMemo(() => {
-    // Message when completion/near completion
+    // Completion/finishing
     if (typeof pct === "number" && pct >= 99) return "Finalizing…"
 
-    // If pct hasn't started yet, use a conservative default (you mentioned 5 mins)
+    // If not started, show fixed 5 min (your desired cap)
     if (typeof pct !== "number" || pct <= 0 || !progressStartedAt) {
+      etaEmaRef.current = null
+      etaLastUpdateRef.current = 0
       return "Video will be ready in approx. 5 mins"
     }
 
     const elapsedMs = Date.now() - progressStartedAt
     const elapsedMin = elapsedMs / 60000
 
-    // Estimate total time from progress: total ~= elapsed / (pct/100)
-    // Then calculate remaining: remaining = total - elapsed
+    // Use pct to estimate total, then calculate remaining
     const frac = Math.max(pct, 1) / 100
     const totalMin = elapsedMin / frac
     let remainingMin = totalMin - elapsedMin
 
-    // Limit ETA to reasonable bounds to avoid huge ETA when pct is small early on
-    remainingMin = Math.min(Math.max(remainingMin, 0.5), 30)
+    // Never exceed 5 minutes, at least 0.5 minutes
+    remainingMin = Math.min(Math.max(remainingMin, 0.5), 5)
 
-    const rounded = Math.round(remainingMin)
+    // Lightweight jitter suppression: update EMA at most every 2 seconds
+    const now = Date.now()
+    if (etaLastUpdateRef.current && now - etaLastUpdateRef.current < 2000 && etaEmaRef.current != null) {
+      const cur = etaEmaRef.current
+      if (cur < 1) return "Video will be ready in < 1 min"
+      return `Video will be ready in approx. ${Math.ceil(cur)} mins`
+    }
+    etaLastUpdateRef.current = now
 
-    // Use "< 1 min" for the first minute
-    if (remainingMin < 1) return "Video will be ready in < 1 min"
-    return `Video will be ready in approx. ${rounded} mins`
+    // EMA smoothing (very lightweight)
+    const alpha = 0.25 // smaller = more stable
+    const prev = etaEmaRef.current
+    const ema = prev == null ? remainingMin : alpha * remainingMin + (1 - alpha) * prev
+    etaEmaRef.current = ema
+
+    // Display: use ceil instead of round (reduce 4.6↔5.4 jumps)
+    if (ema < 1) return "Video will be ready in < 1 min"
+    return `Video will be ready in approx. ${Math.ceil(ema)} mins`
   }, [pct, progressStartedAt])
 
   // 5) Info panel (production): start empty, fill via Firestore + step-preview
