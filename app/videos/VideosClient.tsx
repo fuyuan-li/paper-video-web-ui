@@ -187,22 +187,6 @@ export default function VideosClient() {
           </div>
         )}
       </div>
-
-      <ChatWidget
-        isOpen={chat.isChatOpen}
-        isMinimized={chat.isChatMinimized}
-        onOpen={() => chat.setIsChatOpen(true)}
-        onClose={() => chat.setIsChatOpen(false)}
-        onToggleMinimize={() => chat.setIsChatMinimized((v) => !v)}
-        messages={chat.messages}
-        isLoading={chat.isLoading}
-        inputValue={chat.inputValue}
-        onInputChange={chat.setInputValue}
-        onInputKeyDown={chat.onInputKeyDown}
-        onSend={chat.sendMessage}
-        chatEndRef={chat.chatEndRef}
-        inputRef={chat.inputRef}
-      />
     </main>
   )
 }
