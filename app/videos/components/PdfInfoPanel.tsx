@@ -32,9 +32,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
   )
 
   return (
-    <div className="lg:col-span-2 flex">
-      {/* Key: set Card height limit so internal overflow works */}
-      <Card className="border-2 border-border bg-card w-full flex flex-col overflow-hidden h-[calc(100vh-220px)]">
+      <Card className="border-2 border-border bg-card w-full flex flex-col overflow-hidden h-full">
         {/* Pinned: Title + Pages only */}
         <div className="p-4 border-b-2 border-border bg-card">
           <div className="flex items-start gap-3">
@@ -70,6 +68,5 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
           )}
         </div>
       </Card>
-    </div>
   )
 }

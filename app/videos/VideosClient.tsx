@@ -195,7 +195,9 @@ export default function VideosClient() {
                   <p className="text-xs text-muted-foreground">Video will be ready in approx. 5 mins</p>
                 )}
               </Card>
-              <PdfInfoPanel pinned={pinned} blocks={blocks} />
+              <div className="h-[475px] overflow-auto">
+                <PdfInfoPanel pinned={pinned} blocks={blocks} />
+              </div>
             </div>
 
           </div>
