@@ -156,7 +156,7 @@ export default function VideosClient() {
     <main className="min-h-screen bg-background">
       <VideosHeader />
 
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-6 py-8">
 
         {videos.length === -1 ? (
           <EmptyState />
