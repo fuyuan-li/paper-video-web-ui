@@ -35,8 +35,15 @@ export function useJobProgress(jobId: string | null) {
       const status = String(j.status ?? "").toUpperCase()
       const step = String(j.current_step ?? "")
       const msg = String(j.message ?? "")
+      const videoDone = typeof j.video_done === "number" ? j.video_done : 0
+      const videoTotal = typeof j.video_total === "number" ? j.video_total : null
 
-      setMessage(msg)
+      const clipLine =
+        videoDone != null && videoTotal != null && videoTotal > 1
+          ? `Clips Ready ${videoDone}/${videoTotal}`
+          : ""
+
+      setMessage(clipLine ? (msg ? `${msg} • ${clipLine}` : clipLine) : msg)
 
       // ✅ SUCCEEDED forces 100%
       if (status === "SUCCEEDED") {
@@ -59,8 +66,6 @@ export function useJobProgress(jobId: string | null) {
 
       // 2) Special handling for video step (max 50%)
       const videoWeight = 50
-      const videoDone = typeof j.video_done === "number" ? j.video_done : null
-      const videoTotal = typeof j.video_total === "number" ? j.video_total : null
 
       if (videoDone != null && videoTotal != null && videoTotal > 0) {
         progress += videoWeight * clamp(videoDone / videoTotal, 0, 1)
