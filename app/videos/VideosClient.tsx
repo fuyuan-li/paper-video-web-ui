@@ -72,45 +72,25 @@ export default function VideosClient() {
   }, [jobId, pct, progressStartedAt])
 
   const etaText = React.useMemo(() => {
-    // Completion/finishing
     if (typeof pct === "number" && pct >= 99) return "Finalizing…"
 
-    // If not started, show fixed 5 min (your desired cap)
+    // Fixed ETA 5min
     if (typeof pct !== "number" || pct <= 0 || !progressStartedAt) {
-      etaEmaRef.current = null
-      etaLastUpdateRef.current = 0
       return "Video will be ready in approx. 5 mins"
     }
 
-    const elapsedMs = Date.now() - progressStartedAt
-    const elapsedMin = elapsedMs / 60000
+    const elapsedMin = (Date.now() - progressStartedAt) / 60000
 
-    // Use pct to estimate total, then calculate remaining
+    // remaining = elapsed * (100/pct - 1)
     const frac = Math.max(pct, 1) / 100
     const totalMin = elapsedMin / frac
     let remainingMin = totalMin - elapsedMin
 
-    // Never exceed 5 minutes, at least 0.5 minutes
+    // cap at 5min, floor at 0.5
     remainingMin = Math.min(Math.max(remainingMin, 0.5), 5)
 
-    // Lightweight jitter suppression: update EMA at most every 2 seconds
-    const now = Date.now()
-    if (etaLastUpdateRef.current && now - etaLastUpdateRef.current < 2000 && etaEmaRef.current != null) {
-      const cur = etaEmaRef.current
-      if (cur < 1) return "Video will be ready in < 1 min"
-      return `Video will be ready in approx. ${Math.ceil(cur)} mins`
-    }
-    etaLastUpdateRef.current = now
-
-    // EMA smoothing (very lightweight)
-    const alpha = 0.25 // smaller = more stable
-    const prev = etaEmaRef.current
-    const ema = prev == null ? remainingMin : alpha * remainingMin + (1 - alpha) * prev
-    etaEmaRef.current = ema
-
-    // Display: use ceil instead of round (reduce 4.6↔5.4 jumps)
-    if (ema < 1) return "Video will be ready in < 1 min"
-    return `Video will be ready in approx. ${Math.ceil(ema)} mins`
+    if (remainingMin < 1) return "Video will be ready in < 1 min"
+    return `Video will be ready in approx. ${Math.ceil(remainingMin)} mins`
   }, [pct, progressStartedAt])
 
   // 5) Info panel (production): start empty, fill via Firestore + step-preview
