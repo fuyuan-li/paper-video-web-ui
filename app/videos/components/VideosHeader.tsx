@@ -15,9 +15,6 @@ export function VideosHeader() {
           <a href="/" className="font-medium text-muted-foreground hover:text-accent transition-colors">
             Upload
           </a>
-          <a href="/videos" className="font-medium text-foreground hover:text-accent transition-colors">
-            My Videos
-          </a>
         </nav>
       </div>
     </header>
