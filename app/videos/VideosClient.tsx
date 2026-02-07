@@ -15,7 +15,7 @@ import { useJobProgress } from "./hooks/useJobProgress"
 import { VideosHeader } from "./components/VideosHeader"
 import { EmptyState } from "./components/EmptyState"
 import { VideoSection } from "./components/VideoSection"
-import { PdfInfoPanel } from "./components/PdfInfoPanel"
+import { PinnedMeta, PdfInfoPanel } from "./components/PdfInfoPanel"
 import { ChatWidget } from "./components/ChatWidget"
 import { Card } from "@/components/ui/card"
 import { JobProgressBar } from "./components/JobProgressBar"
@@ -95,7 +95,7 @@ export default function VideosClient() {
   }, [pct, progressStartedAt])
 
   // 5) Info panel (production): start empty, fill via Firestore + step-preview
-  const [pinned, setPinned] = React.useState<{ title?: string; pageCount?: number }>({})
+  const [pinned, setPinned] = React.useState<PinnedMeta>({})
   const [blocks, setBlocks] = React.useState<
     { step: string; ts: number; data: Record<string, any>; uri?: string }[]
   >([])

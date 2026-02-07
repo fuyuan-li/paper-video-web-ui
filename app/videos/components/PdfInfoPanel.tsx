@@ -8,6 +8,7 @@ import { BlockRenderer, type InfoBlock } from "./PdfInfoBlocks"
 export type PinnedMeta = {
   title?: string
   pageCount?: number
+  filename?: string
 }
 
 type Props = {
@@ -25,7 +26,17 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
     el.scrollTo({top: el.scrollHeight, behavior: "smooth" })
   }, [blocks.length])
 
-  const titleText = useMemo(() => pinned.title?.trim() || "", [pinned.title])
+  const titleText = useMemo(() => {
+    const t = pinned.title?.trim()
+    if (t) return t
+
+    const f = pinned.filename?.trim()
+    if (!f) return ""
+
+    // remove ".pdf" (case-insensitive)
+    return f.replace(/\.pdf$/i, "")
+  }, [pinned.title, pinned.filename])
+
   const pagesText = useMemo(
     () => (typeof pinned.pageCount === "number" ? String(pinned.pageCount) : "—"),
     [pinned.pageCount]

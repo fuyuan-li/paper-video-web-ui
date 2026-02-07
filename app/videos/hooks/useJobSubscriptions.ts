@@ -43,6 +43,11 @@ export function useJobSubscriptions(args: {
       const step = j.current_step ?? ""
       const stepStatus = j.current_step_status ?? ""
       const msg = j.message ?? ""
+      const filename = j.filename
+      setPinnedMeta((p) => ({
+        ...p,
+        filename: typeof filename === "string" ? filename : p.filename,
+      }))
 
       setJobStatusText(
         [
