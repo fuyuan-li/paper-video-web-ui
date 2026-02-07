@@ -18,7 +18,7 @@ type Props = {
 export function PdfInfoPanel({ pinned, blocks }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
-  // ✅ 自动下滚：滚动 panel 内部，而不是页面
+  // Auto-scroll: scroll inside panel, not the page itself
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -33,7 +33,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
 
   return (
     <div className="lg:col-span-2 flex">
-      {/* ✅ 关键：给 Card 限高，这样内部 overflow 才会生效 */}
+      {/* Key: set Card height limit so internal overflow works */}
       <Card className="border-2 border-border bg-card w-full flex flex-col overflow-hidden h-[calc(100vh-220px)]">
         {/* Pinned: Title + Pages only */}
         <div className="p-4 border-b-2 border-border bg-card">
@@ -55,7 +55,7 @@ export function PdfInfoPanel({ pinned, blocks }: Props) {
           </div>
         </div>
 
-        {/* ✅ 滚动容器：ref 放这里 */}
+        {/* Scroll container: ref is placed here */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
           {blocks.length === 0 ? (
             <div className="text-sm text-muted-foreground py-2">Waiting for pipeline updates…</div>

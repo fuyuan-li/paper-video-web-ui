@@ -54,7 +54,7 @@ export function useJobSubscriptions(args: {
       // ✅ MVP trigger: whenever current_step changes, try fetching step preview
       // (If backend not ready yet, it may return 404; we just ignore.)
       if (!step) return
-      // 只在 step 成功时响应
+      // Only respond when step is successful
       if (status !== "COMPLETED") return
       if (lastRequestedStepRef.current === step) return
       lastRequestedStepRef.current = step

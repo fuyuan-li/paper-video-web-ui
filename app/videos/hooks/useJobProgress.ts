@@ -28,12 +28,12 @@ const STATUS_PCT: Record<ProgressKey, number> = {
 }
 
 function toProgressKeyFromJob(j: any): ProgressKey | null {
-  // 你现在 jobStatusText 用的是 current_step + status + message
-  // 我们优先用 current_step；拿不到再 fallback 到 status
+  // Currently jobStatusText uses current_step + status + message
+  // We prioritize current_step; fallback to status if not available
   const raw = String(j?.current_step ?? j?.status ?? "").trim().toLowerCase()
   if (!raw) return null
 
-  // 兼容一些可能的变体
+  // Support some possible variants
   if (raw.includes("doc_ir")) return "doc_ir"
   if (raw.includes("sketch")) return "sketch"
   if (raw.includes("world")) return "world"
@@ -78,7 +78,7 @@ function computePct(args: { key: ProgressKey; doneClips: number }): number {
 
   const base = STATUS_PCT[key] ?? 0
 
-  // clip 增量：每个 clip +3%，但 video 之前最多到 97
+  // Clip increment: each clip +3%, but max 97 before video
   const maxBeforeVideo = 97
   const maxClipAdd = Math.max(0, maxBeforeVideo - base)
   const clipAdd = Math.min(doneClips * 3, maxClipAdd)
@@ -92,7 +92,7 @@ export function useJobProgress(jobId: string | null) {
   const [doneClips, setDoneClips] = useState<number>(0)
   const [totalClips, setTotalClips] = useState<number | null>(null)
 
-  // 可选：让进度只增不减，避免重试/乱序造成回退（demo 体验更稳）
+  // Optional: make progress monotonic (only increase, never decrease) to avoid rollback from retries/reordering (better demo experience)
   const maxPctSeenRef = useRef<number>(0)
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export function useJobProgress(jobId: string | null) {
       if (!snap.exists()) return
       const j: any = snap.data()
 
-      // 这个 message 可选：用于 UI 小字显示
+      // This message is optional: used for small text in UI
       const status = String(j?.status ?? "").toUpperCase()
       const step = j.current_step ?? ""
       const msg = j.message ?? ""
@@ -124,7 +124,7 @@ export function useJobProgress(jobId: string | null) {
       snap.forEach((d) => {
         const data: any = d.data()
         const st = String(data.status ?? "").toUpperCase()
-        // 和你旧逻辑一致：READY 视作 clip 完成
+        // Consistent with your old logic: READY counts as clip completed
         if (st === "READY") done += 1
 
         const t = Number(data.total)
@@ -145,7 +145,7 @@ export function useJobProgress(jobId: string | null) {
 
   const pct = useMemo(() => {
     const rawPct = computePct({ key, doneClips })
-    // monotonic：只增不减（可关掉，如果你不想这样）
+    // Monotonic: only increase, never decrease (can be disabled if you don't want this)
     maxPctSeenRef.current = Math.max(maxPctSeenRef.current, rawPct)
     return maxPctSeenRef.current
   }, [key, doneClips])
@@ -160,10 +160,10 @@ export function useJobProgress(jobId: string | null) {
   }, [key, doneClips, totalClips])
 
   return {
-    key, // 当前阶段
+    key, // Current stage
     pct, // 0~100
-    label, // 可展示的文字
-    message, // 你原先 jobStatusText 的组合信息（可选展示）
+    label, // Text to display
+    message, // Combined info from original jobStatusText (optional to display)
     doneClips,
     totalClips,
   }
