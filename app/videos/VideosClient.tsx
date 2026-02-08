@@ -107,10 +107,10 @@ export default function VideosClient() {
   const pendingBlocksRef = React.useRef<UiInfoBlock[]>([])
   const hydratedRef = React.useRef(false)
 
-  // 直接把 block 放进 UI（不走缓释队列）
+  // Push block directly to UI (skip deferred queue)
   const pushBlockImmediate = React.useCallback((b: UiInfoBlock) => {
     setBlocks(prev => {
-      // 有 id 用 id 去重；没 id 用 step 去重（你现有逻辑）
+      // If has id use id dedup; no id use step dedup (your current logic)
       if (b.id) {
         const i = prev.findIndex(x => x.id === b.id)
         if (i === -1) return [...prev, b]
@@ -130,9 +130,9 @@ export default function VideosClient() {
 
   const appendInfoBlock = React.useCallback(
     (b: UiInfoBlock) => {
-      // ✅ 第一次进入页面的“初始化阶段”：直接显示，不缓释
+      // ✅ First page entry "initialization phase": show directly, no deferred queue
       if (!hydratedRef.current) {
-        // glossary expand 也同理：直接展开并 immediate push
+        // glossary expand same logic: expand directly and immediate push
         if (b.step === "glossary") {
           const title = String(b.data?.title ?? "Glossary").trim()
           const intro = String(b.data?.intro ?? "").trim()
@@ -251,14 +251,14 @@ export default function VideosClient() {
     pendingBlocksRef.current = []
   }, [jobId])
 
-  // ✅ 控制“首次进入 vs 后续增量”的 hydrate 窗口
+  // ✅ Control hydration window: "first entry vs subsequent increments"
   React.useEffect(() => {
     hydratedRef.current = false
 
-    // 给 initial snapshot 一个窗口期：这段时间内来的 block 都直接显示
+    // Give initial snapshot a window: blocks during this time are shown directly
     const t = window.setTimeout(() => {
       hydratedRef.current = true
-    }, 600)
+    }, 10000)
 
     return () => window.clearTimeout(t)
   }, [jobId])
