@@ -258,7 +258,7 @@ export default function VideosClient() {
     // Give initial snapshot a window: blocks during this time are shown directly
     const t = window.setTimeout(() => {
       hydratedRef.current = true
-    }, 10000)
+    }, 30000)
 
     return () => window.clearTimeout(t)
   }, [jobId])
