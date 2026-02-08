@@ -105,11 +105,58 @@ export default function VideosClient() {
   const [pinned, setPinned] = React.useState<PinnedMeta>({})
   const [blocks, setBlocks] = React.useState<UiInfoBlock[]>([])
   const pendingBlocksRef = React.useRef<UiInfoBlock[]>([])
+  const hydratedRef = React.useRef(false)
 
+  // 直接把 block 放进 UI（不走缓释队列）
+  const pushBlockImmediate = React.useCallback((b: UiInfoBlock) => {
+    setBlocks(prev => {
+      // 有 id 用 id 去重；没 id 用 step 去重（你现有逻辑）
+      if (b.id) {
+        const i = prev.findIndex(x => x.id === b.id)
+        if (i === -1) return [...prev, b]
+        const copy = prev.slice()
+        copy[i] = b
+        return copy
+      } else {
+        const i = prev.findIndex(x => x.step === b.step)
+        if (i === -1) return [...prev, b]
+        const copy = prev.slice()
+        copy[i] = b
+        return copy
+      }
+    })
+  }, [])
 
 
   const appendInfoBlock = React.useCallback(
     (b: UiInfoBlock) => {
+      // ✅ 第一次进入页面的“初始化阶段”：直接显示，不缓释
+      if (!hydratedRef.current) {
+        // glossary expand 也同理：直接展开并 immediate push
+        if (b.step === "glossary") {
+          const title = String(b.data?.title ?? "Glossary").trim()
+          const intro = String(b.data?.intro ?? "").trim()
+          const outro = String(b.data?.outro ?? "").trim()
+          const items: any[] = Array.isArray(b.data?.items) ? b.data.items : []
+          const base = `glossary:${b.ts}`
+          let seq = 0
+
+          if (intro) {
+            pushBlockImmediate({ id: `${base}:${seq++}:intro`, step: "glossary", ts: b.ts + seq, data: { kind: "intro", title, text: intro } })
+          }
+          items.forEach((it, idx) => {
+            pushBlockImmediate({ id: `${base}:${seq++}:item:${idx}`, step: "glossary", ts: b.ts + seq, data: { kind: "item", item: it } })
+          })
+          if (outro) {
+            pushBlockImmediate({ id: `${base}:${seq++}:outro`, step: "glossary", ts: b.ts + seq, data: { kind: "outro", text: outro } })
+          }
+          return
+        }
+
+        pushBlockImmediate(b)
+        return
+      }
+
       // --- Special: expand glossary into multiple queued chunks ---
       if (b.step === "glossary") {
         const title = String(b.data?.title ?? "Glossary").trim()
@@ -157,7 +204,7 @@ export default function VideosClient() {
       const q = pendingBlocksRef.current
       pendingBlocksRef.current = [...q.filter(x => x.step !== b.step), b]
     },
-    [setBlocks]
+    [pushBlockImmediate]
   )
   // Every x-second give 1 block to UI
   React.useEffect(() => {
@@ -202,6 +249,18 @@ export default function VideosClient() {
     setPinned({})
     setBlocks([])
     pendingBlocksRef.current = []
+  }, [jobId])
+
+  // ✅ 控制“首次进入 vs 后续增量”的 hydrate 窗口
+  React.useEffect(() => {
+    hydratedRef.current = false
+
+    // 给 initial snapshot 一个窗口期：这段时间内来的 block 都直接显示
+    const t = window.setTimeout(() => {
+      hydratedRef.current = true
+    }, 600)
+
+    return () => window.clearTimeout(t)
   }, [jobId])
 
   // Auto-select first video once videos loaded (avoid using `player` object as dependency)
