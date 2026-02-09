@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'PDF to Video | Convert Documents to Video Clips',
+  title: 'The BoardBook | Research, a video story for everyone',
   description: 'Upload your PDF documents and convert them to engaging video clips',
   generator: 'v0.app',
   icons: {
