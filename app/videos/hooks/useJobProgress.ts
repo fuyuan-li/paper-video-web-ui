@@ -6,12 +6,12 @@ import { db } from "@/lib/firebase"
 
 const STEP_WEIGHTS: Record<string, number> = {
   doc_ir: 1,
-  sketch: 4,
-  world: 5,
-  glossary: 5,
-  claim: 16,
+  sketch: 3,
+  world: 6,
+  glossary: 3,
+  claim: 15,
   visual_assets: 5,
-  storyboard: 12,
+  storyboard: 16,
   // video handled specially (up to 50)
   // merge handled by SUCCEEDED => 100
 }
