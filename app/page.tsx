@@ -111,7 +111,7 @@ export default function UploadPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
             <Video className="h-6 w-6 text-accent" />
-            <span className="text-xl font-bold text-foreground">The BoardBook — Research, a video story for everyone</span>
+            <span className="text-xl font-bold text-foreground">The PaperBook — Research, a video story for everyone</span>
           </div>
           <nav className="flex items-center gap-6">
             <button
@@ -132,7 +132,7 @@ export default function UploadPage() {
             Turn a research paper into a video story anyone can understand
           </h1>
           <p className="text-lg text-muted-foreground max-w-4xl mx-auto">
-            Upload a research paper or technical PDF. We understand it first — then generate a ~60–90s explainer video to help non-experts grasp the core idea.
+            Upload a research paper. We understand it first — then generate a 90s explainer video to help non-experts grasp the core idea.
           </p>
         </div>
 

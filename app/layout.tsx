@@ -8,8 +8,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'The BoardBook | Research, a video story for everyone',
-  description: 'Upload your PDF documents and convert them to engaging video clips',
+  title: 'The PaperBook | Research, a video story for everyone',
+  description: 'Upload your research paper and convert them to intuitive explainer video',
   generator: 'v0.app',
   icons: {
     icon: [
